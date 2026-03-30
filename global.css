@@ -82,11 +82,11 @@
   }
 
   .home-user-name {
-    @apply ml-4 text-2xl font-sans-bold text-primary;
+    @apply ml-4 text-xl font-sans-bold text-primary;
   }
 
   .home-add-icon {
-    @apply size-12;
+    @apply size-8;
   }
 
   .home-balance-card {
