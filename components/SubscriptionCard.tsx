@@ -28,6 +28,9 @@ const SubscriptionCard = ({
       onPress={onPress}
       className={clsx("sub-card", expanded ? "sub-card-expanded" : "bg-card")}
       style={!expanded && color ? { backgroundColor: color } : undefined}
+      accessibilityRole="button"
+      accessibilityLabel={`${name} subscription, ${formatCurrency(price, currency)} ${billing}`}
+      accessibilityState={{ expanded }}
     >
       <View className="sub-head">
         <View className="sub-main">

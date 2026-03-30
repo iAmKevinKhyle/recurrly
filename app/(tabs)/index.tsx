@@ -13,7 +13,7 @@ import { icons } from "@/constants/icons";
 import { formatCurrency } from "@/libs/utils";
 import dayjs from "dayjs";
 import ListHeading from "@/components/ListHeading";
-import UpcomingSubscrptionsCard from "@/components/UpcomingSubscrptionsCard";
+import UpcomingSubscriptionsCard from "@/components/UpcomingSubscriptionsCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import { useState } from "react";
 const SafeAreaView = styled(RNSafeAreaView);
@@ -40,7 +40,7 @@ export default function App() {
             </View>
 
             <View className="home-balance-card">
-              <Text className="home-balance-amount">Balance</Text>
+              <Text className="home-balance-label">Balance</Text>
 
               <View className="home-balance-row">
                 <Text className="home-balance-amount">
@@ -58,7 +58,7 @@ export default function App() {
               <FlatList
                 data={UPCOMING_SUBSCRIPTIONS}
                 renderItem={({ item }) => (
-                  <UpcomingSubscrptionsCard {...item} />
+                  <UpcomingSubscriptionsCard {...item} />
                 )}
                 keyExtractor={(item) => item.id}
                 horizontal
