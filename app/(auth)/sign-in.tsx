@@ -10,9 +10,10 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSignIn } from "@clerk/expo";
+import { useSignIn, useUser } from "@clerk/expo";
 import { useClerk } from "@clerk/expo";
 import { useRouter, Link } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import { validateEmail, validateVerificationCode } from "@/libs/validation";
 import {
   AUTH_MESSAGES,
@@ -38,8 +39,10 @@ const parseClerkError = (err: any, fallbackMessage: string): string => {
 
 export default function SignIn() {
   const { signIn } = useSignIn();
+  const { user } = useUser();
   const { setActive } = useClerk();
   const router = useRouter();
+  const posthog = usePostHog();
   const codeInputRef = useRef<TextInput>(null);
 
   const [step, setStep] = useState<SignInStep>("credentials");
@@ -81,6 +84,18 @@ export default function SignIn() {
       if (signIn.status === "complete") {
         // Sign in successful
         await setActive({ session: signIn.createdSessionId });
+
+        posthog.identify(user?.id || "Unknown", {
+          email: email.trim(),
+          signInMethod: "email_password",
+          lastSignInAt: new Date().toISOString(),
+        });
+
+        posthog.capture("user_signed_in", {
+          email: email.trim(),
+          method: "email_password",
+        });
+
         router.replace("/");
       } else if (
         signIn.status === "needs_second_factor" ||
@@ -138,6 +153,16 @@ export default function SignIn() {
 
       if (signIn.status === "complete") {
         await setActive({ session: signIn.createdSessionId });
+
+        posthog.identify(user?.id || "Unknown", {
+          mfaCompleted: true,
+          lastMFAAt: new Date().toISOString(),
+        });
+
+        posthog.capture("mfa_verified", {
+          strategy: "email_code",
+        });
+
         router.replace("/");
       } else {
         setGeneralError(error?.message || AUTH_ERRORS.SOMETHING_WENT_WRONG);

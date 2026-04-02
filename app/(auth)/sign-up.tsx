@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useSignUp } from "@clerk/expo";
 import { useClerk } from "@clerk/expo";
 import { useRouter, Link } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import {
   validateEmail,
   validatePassword,
@@ -41,6 +42,7 @@ export default function SignUp() {
   const { signUp } = useSignUp();
   const { setActive } = useClerk();
   const router = useRouter();
+  const posthog = usePostHog();
   const codeInputRef = useRef<TextInput>(null);
 
   const [step, setStep] = useState<SignUpStep>("form");
@@ -135,7 +137,25 @@ export default function SignUp() {
       await signUp.verifications.verifyEmailCode({ code: code.trim() });
 
       if (signUp.status === "complete") {
-        await setActive({ session: signUp.createdSessionId });
+        const userId = signUp?.createdUserId || "Unknown";
+        const firstName = signUp?.firstName || "";
+        const lastName = signUp?.lastName || "";
+
+        await setActive({ session: signUp?.createdSessionId });
+
+        posthog.identify(userId, {
+          email: email.trim(),
+          firstName,
+          lastName,
+          signupMethod: "email_password",
+          createdAt: new Date().toISOString(),
+        });
+
+        posthog.capture("user_signed_up", {
+          email: email.trim(),
+          method: "email_password",
+        });
+
         router.replace("/");
       } else {
         setGeneralError(AUTH_ERRORS.SIGN_UP_NOT_COMPLETE);
