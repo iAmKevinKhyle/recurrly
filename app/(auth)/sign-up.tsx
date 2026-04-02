@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSignUp } from "@clerk/expo";
@@ -51,6 +53,10 @@ export default function SignUp() {
   const [code, setCode] = useState("");
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
+  const resendCooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+
   // Validation on change
   const validateForm = useCallback(() => {
     const errors: FormErrors = {};
@@ -80,11 +86,13 @@ export default function SignUp() {
     try {
       const { error } = await signUp?.password({
         emailAddress: email.trim(),
-        password: password.trim(),
+        password,
       });
 
       if (error) {
-        console.error(JSON.stringify(error, null, 2));
+        if (__DEV__) {
+          console.error("Sign-up error code:", error);
+        }
         setGeneralError(
           parseClerkError(error, AUTH_ERRORS.SOMETHING_WENT_WRONG),
         );
@@ -92,11 +100,13 @@ export default function SignUp() {
       }
 
       if (!error) {
-        await signUp.verifications.sendEmailCode();
         setStep("verify");
+        await signUp.verifications.sendEmailCode();
       }
     } catch (err: any) {
-      console.error("Sign-up error:", err);
+      if (__DEV__) {
+        console.error("Sign-up error code:", err);
+      }
       if (err.errors?.[0]?.code === "form_identifier_exists") {
         setGeneralError(AUTH_ERRORS.EMAIL_ALREADY_IN_USE);
       } else {
@@ -156,10 +166,14 @@ export default function SignUp() {
 
       // Start 60-second cooldown to prevent spam
       setResendCooldown(60);
-      const interval = setInterval(() => {
+      resendCooldownTimerRef.current = setInterval(() => {
         setResendCooldown((prev) => {
           if (prev <= 1) {
-            clearInterval(interval);
+            if (resendCooldownTimerRef.current) {
+              clearInterval(resendCooldownTimerRef.current);
+              resendCooldownTimerRef.current = null;
+            }
+
             return 0;
           }
           return prev - 1;
@@ -172,6 +186,14 @@ export default function SignUp() {
       setIsLoading(false);
     }
   }, [signUp, resendCooldown]);
+
+  useEffect(() => {
+    return () => {
+      if (resendCooldownTimerRef.current) {
+        clearInterval(resendCooldownTimerRef.current);
+      }
+    };
+  }, []);
 
   if (!signUp) {
     return (
@@ -186,275 +208,282 @@ export default function SignUp() {
 
   return (
     <SafeAreaView className="auth-safe-area" edges={["top", "bottom"]}>
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        // className="auth-screen"
       >
-        <View className="auth-content">
-          {/* Brand Block */}
-          <View className="auth-brand-block">
-            <View className="auth-logo-wrap">
-              <View className="auth-logo-mark">
-                <Text className="auth-logo-mark-text">₹</Text>
-              </View>
-              <View>
-                <Text className="auth-wordmark">Recurrly</Text>
-                <Text className="auth-wordmark-sub">Smart Billing</Text>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="auth-content">
+            {/* Brand Block */}
+            <View className="auth-brand-block">
+              <View className="auth-logo-wrap">
+                <View className="auth-logo-mark">
+                  <Text className="auth-logo-mark-text">₹</Text>
+                </View>
+                <View>
+                  <Text className="auth-wordmark">Recurrly</Text>
+                  <Text className="auth-wordmark-sub">Smart Billing</Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* Title & Subtitle */}
-          <View style={{ alignItems: "center", marginTop: 20 }}>
-            <Text className="auth-title">{AUTH_MESSAGES.SIGN_UP_TITLE}</Text>
-            <Text className="auth-subtitle">
-              {AUTH_MESSAGES.SIGN_UP_SUBTITLE}
-            </Text>
-          </View>
+            {/* Title & Subtitle */}
+            <View style={{ alignItems: "center", marginTop: 20 }}>
+              <Text className="auth-title">{AUTH_MESSAGES.SIGN_UP_TITLE}</Text>
+              <Text className="auth-subtitle">
+                {AUTH_MESSAGES.SIGN_UP_SUBTITLE}
+              </Text>
+            </View>
 
-          {/* Main Card */}
-          <View className="auth-card">
-            {/* General Error */}
-            {generalError && (
-              <View
-                style={{
-                  backgroundColor: colors.destructive + "15",
-                  borderRadius: 12,
-                  padding: 12,
-                  marginBottom: 16,
-                  borderLeftWidth: 3,
-                  borderLeftColor: colors.destructive,
-                }}
-              >
-                <Text
+            {/* Main Card */}
+            <View className="auth-card">
+              {/* General Error */}
+              {generalError && (
+                <View
                   style={{
-                    color: colors.destructive,
-                    fontSize: 14,
-                    fontWeight: "600",
+                    backgroundColor: colors.destructive + "15",
+                    borderRadius: 12,
+                    padding: 12,
+                    marginBottom: 16,
+                    borderLeftWidth: 3,
+                    borderLeftColor: colors.destructive,
                   }}
                 >
-                  {generalError}
-                </Text>
-              </View>
-            )}
-
-            {step === "form" ? (
-              <View className="auth-form">
-                {/* Email Field */}
-                <View className="auth-field">
-                  <Text className="auth-label">Email Address</Text>
-                  <TextInput
-                    className="auth-input"
-                    style={
-                      formErrors.email
-                        ? { borderColor: colors.destructive, borderWidth: 2 }
-                        : { borderColor: colors.border }
-                    }
-                    placeholder="Enter your email"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={email}
-                    onChangeText={(text) => {
-                      setEmail(text);
-                      if (formErrors.email) {
-                        const validation = validateEmail(text);
-                        if (validation.valid) {
-                          setFormErrors((prev) => ({
-                            ...prev,
-                            email: undefined,
-                          }));
-                        }
-                      }
-                    }}
-                    editable={!isLoading}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    accessibilityLabel="Email input"
-                  />
-                  {formErrors.email && (
-                    <Text className="auth-error">{formErrors.email}</Text>
-                  )}
-                </View>
-
-                {/* Password Field */}
-                <View className="auth-field">
-                  <Text className="auth-label">Password</Text>
-                  <TextInput
-                    className="auth-input"
-                    style={
-                      formErrors.password
-                        ? { borderColor: colors.destructive, borderWidth: 2 }
-                        : { borderColor: colors.border }
-                    }
-                    placeholder="Create a strong password"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={password}
-                    onChangeText={(text) => {
-                      setPassword(text);
-                      if (formErrors.password) {
-                        const validation = validatePassword(text);
-                        if (validation.valid) {
-                          setFormErrors((prev) => ({
-                            ...prev,
-                            password: undefined,
-                          }));
-                        }
-                      }
-                    }}
-                    editable={!isLoading}
-                    secureTextEntry
-                    accessibilityLabel="Password input"
-                  />
-                  {formErrors.password && (
-                    <Text className="auth-error">{formErrors.password}</Text>
-                  )}
-                  {!formErrors.password && password && (
-                    <Text className="auth-helper">
-                      {AUTH_MESSAGES.PASSWORD_REQUIREMENTS}
-                    </Text>
-                  )}
-                </View>
-
-                {/* Submit Button */}
-                <Pressable
-                  className="auth-button"
-                  onPress={handleSignUp}
-                  disabled={isLoading || !email || !password}
-                  style={
-                    isLoading || !email || !password ? { opacity: 0.6 } : {}
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="Create account"
-                  accessibilityHint="Creates a new account with your email and password"
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color={colors.primary} size="small" />
-                  ) : (
-                    <Text className="auth-button-text">Create Account</Text>
-                  )}
-                </Pressable>
-
-                {/* Sign In Link */}
-                <View className="auth-link-row">
-                  <Text className="auth-link-copy">
-                    Already have an account?
-                  </Text>
-                  <Link href="/(auth)/sign-in" asChild>
-                    <Pressable>
-                      <Text className="auth-link">Sign in</Text>
-                    </Pressable>
-                  </Link>
-                </View>
-              </View>
-            ) : (
-              <View className="auth-form">
-                {/* Verification Code Field */}
-                <View style={{ marginBottom: 12 }}>
                   <Text
                     style={{
-                      fontSize: 16,
-                      fontWeight: "600",
-                      color: colors.primary,
-                      marginBottom: 8,
-                    }}
-                  >
-                    {AUTH_MESSAGES.VERIFY_TITLE}
-                  </Text>
-                  <Text
-                    style={{
+                      color: colors.destructive,
                       fontSize: 14,
-                      color: "rgba(0, 0, 0, 0.6)",
-                      marginBottom: 16,
+                      fontWeight: "600",
                     }}
                   >
-                    {AUTH_MESSAGES.CHECK_EMAIL}
+                    {generalError}
                   </Text>
                 </View>
+              )}
 
-                <View className="auth-field">
-                  <Text className="auth-label">Verification Code</Text>
-                  <TextInput
-                    ref={codeInputRef}
-                    className="auth-input"
-                    style={
-                      formErrors.code
-                        ? { borderColor: colors.destructive, borderWidth: 2 }
-                        : { borderColor: colors.border }
-                    }
-                    placeholder="000000"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={code}
-                    onChangeText={(text) => {
-                      setCode(text.replace(/\D/g, "").slice(0, 6));
-                      if (formErrors.code) {
-                        const validation = validateVerificationCode(text);
-                        if (validation.valid) {
-                          setFormErrors((prev) => ({
-                            ...prev,
-                            code: undefined,
-                          }));
-                        }
+              {step === "form" ? (
+                <View className="auth-form">
+                  {/* Email Field */}
+                  <View className="auth-field">
+                    <Text className="auth-label">Email Address</Text>
+                    <TextInput
+                      className="auth-input"
+                      style={
+                        formErrors.email
+                          ? { borderColor: colors.destructive, borderWidth: 2 }
+                          : { borderColor: colors.border }
                       }
-                    }}
-                    editable={!isLoading}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    textAlign="center"
-                    accessibilityLabel="Verification code input"
-                  />
-                  {formErrors.code && (
-                    <Text className="auth-error">{formErrors.code}</Text>
-                  )}
+                      placeholder="Enter your email"
+                      placeholderTextColor={colors.mutedForeground}
+                      value={email}
+                      onChangeText={(text) => {
+                        setEmail(text);
+                        if (formErrors.email) {
+                          const validation = validateEmail(text);
+                          if (validation.valid) {
+                            setFormErrors((prev) => ({
+                              ...prev,
+                              email: undefined,
+                            }));
+                          }
+                        }
+                      }}
+                      editable={!isLoading}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      accessibilityLabel="Email input"
+                    />
+                    {formErrors.email && (
+                      <Text className="auth-error">{formErrors.email}</Text>
+                    )}
+                  </View>
+
+                  {/* Password Field */}
+                  <View className="auth-field">
+                    <Text className="auth-label">Password</Text>
+                    <TextInput
+                      className="auth-input"
+                      style={
+                        formErrors.password
+                          ? { borderColor: colors.destructive, borderWidth: 2 }
+                          : { borderColor: colors.border }
+                      }
+                      placeholder="Create a strong password"
+                      placeholderTextColor={colors.mutedForeground}
+                      value={password}
+                      onChangeText={(text) => {
+                        setPassword(text);
+                        if (formErrors.password) {
+                          const validation = validatePassword(text);
+                          if (validation.valid) {
+                            setFormErrors((prev) => ({
+                              ...prev,
+                              password: undefined,
+                            }));
+                          }
+                        }
+                      }}
+                      editable={!isLoading}
+                      secureTextEntry
+                      accessibilityLabel="Password input"
+                    />
+                    {formErrors.password && (
+                      <Text className="auth-error">{formErrors.password}</Text>
+                    )}
+                    {!formErrors.password && password && (
+                      <Text className="auth-helper">
+                        {AUTH_MESSAGES.PASSWORD_REQUIREMENTS}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Submit Button */}
+                  <Pressable
+                    className="auth-button"
+                    onPress={handleSignUp}
+                    disabled={isLoading || !email || !password}
+                    style={
+                      isLoading || !email || !password ? { opacity: 0.6 } : {}
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel="Create account"
+                    accessibilityHint="Creates a new account with your email and password"
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color={colors.primary} size="small" />
+                    ) : (
+                      <Text className="auth-button-text">Create Account</Text>
+                    )}
+                  </Pressable>
+
+                  {/* Sign In Link */}
+                  <View className="auth-link-row">
+                    <Text className="auth-link-copy">
+                      Already have an account?
+                    </Text>
+                    <Link href="/(auth)/sign-in" asChild>
+                      <Pressable>
+                        <Text className="auth-link">Sign in</Text>
+                      </Pressable>
+                    </Link>
+                  </View>
                 </View>
-
-                {/* Verify Button */}
-                <Pressable
-                  className="auth-button"
-                  onPress={handleVerifyCode}
-                  disabled={isLoading || code.length !== 6}
-                  style={isLoading || code.length !== 6 ? { opacity: 0.6 } : {}}
-                  accessibilityRole="button"
-                  accessibilityLabel="Verify code"
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color={colors.primary} size="small" />
-                  ) : (
-                    <Text className="auth-button-text">Verify Email</Text>
-                  )}
-                </Pressable>
-
-                {/* Resend Code Button with Cooldown */}
-                <Pressable
-                  className="auth-secondary-button"
-                  onPress={handleResendCode}
-                  disabled={isLoading || resendCooldown > 0}
-                  accessibilityRole="button"
-                  accessibilityLabel="Resend verification code"
-                  accessibilityHint={
-                    resendCooldown > 0
-                      ? `Available in ${resendCooldown} seconds`
-                      : undefined
-                  }
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color={colors.accent} size="small" />
-                  ) : resendCooldown > 0 ? (
+              ) : (
+                <View className="auth-form">
+                  {/* Verification Code Field */}
+                  <View style={{ marginBottom: 12 }}>
                     <Text
-                      className="auth-secondary-button-text"
-                      style={{ opacity: 0.6 }}
+                      style={{
+                        fontSize: 16,
+                        fontWeight: "600",
+                        color: colors.primary,
+                        marginBottom: 8,
+                      }}
                     >
-                      Resend in {resendCooldown}s
+                      {AUTH_MESSAGES.VERIFY_TITLE}
                     </Text>
-                  ) : (
-                    <Text className="auth-secondary-button-text">
-                      {AUTH_MESSAGES.RESEND_CODE}
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        color: "rgba(0, 0, 0, 0.6)",
+                        marginBottom: 16,
+                      }}
+                    >
+                      {AUTH_MESSAGES.CHECK_EMAIL}
                     </Text>
-                  )}
-                </Pressable>
-              </View>
-            )}
+                  </View>
+
+                  <View className="auth-field">
+                    <Text className="auth-label">Verification Code</Text>
+                    <TextInput
+                      ref={codeInputRef}
+                      className="auth-input"
+                      style={
+                        formErrors.code
+                          ? { borderColor: colors.destructive, borderWidth: 2 }
+                          : { borderColor: colors.border }
+                      }
+                      placeholder="000000"
+                      placeholderTextColor={colors.mutedForeground}
+                      value={code}
+                      onChangeText={(text) => {
+                        setCode(text.replace(/\D/g, "").slice(0, 6));
+                        if (formErrors.code) {
+                          const validation = validateVerificationCode(text);
+                          if (validation.valid) {
+                            setFormErrors((prev) => ({
+                              ...prev,
+                              code: undefined,
+                            }));
+                          }
+                        }
+                      }}
+                      editable={!isLoading}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      textAlign="center"
+                      accessibilityLabel="Verification code input"
+                    />
+                    {formErrors.code && (
+                      <Text className="auth-error">{formErrors.code}</Text>
+                    )}
+                  </View>
+
+                  {/* Verify Button */}
+                  <Pressable
+                    className="auth-button"
+                    onPress={handleVerifyCode}
+                    disabled={isLoading || code.length !== 6}
+                    style={
+                      isLoading || code.length !== 6 ? { opacity: 0.6 } : {}
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel="Verify code"
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color={colors.primary} size="small" />
+                    ) : (
+                      <Text className="auth-button-text">Verify Email</Text>
+                    )}
+                  </Pressable>
+
+                  {/* Resend Code Button with Cooldown */}
+                  <Pressable
+                    className="auth-secondary-button"
+                    onPress={handleResendCode}
+                    disabled={isLoading || resendCooldown > 0}
+                    accessibilityRole="button"
+                    accessibilityLabel="Resend verification code"
+                    accessibilityHint={
+                      resendCooldown > 0
+                        ? `Available in ${resendCooldown} seconds`
+                        : undefined
+                    }
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color={colors.accent} size="small" />
+                    ) : resendCooldown > 0 ? (
+                      <Text
+                        className="auth-secondary-button-text"
+                        style={{ opacity: 0.6 }}
+                      >
+                        Resend in {resendCooldown}s
+                      </Text>
+                    ) : (
+                      <Text className="auth-secondary-button-text">
+                        {AUTH_MESSAGES.RESEND_CODE}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

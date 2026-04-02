@@ -1,3 +1,5 @@
+import { VERIFICATION_CODE_LENGTH } from "@/constants/auth";
+
 /**
  * Form validation utilities for authentication flows
  */
@@ -79,8 +81,12 @@ export const validateVerificationCode = (code: string): ValidationError => {
     return { valid: false, error: "Verification code is required" };
   }
 
-  if (!/^\d{6}$/.test(code.trim())) {
-    return { valid: false, error: "Verification code must be 6 digits" };
+  const regex = new RegExp(`^\\d{${VERIFICATION_CODE_LENGTH}}$`);
+  if (!regex.test(code.trim())) {
+    return {
+      valid: false,
+      error: `Verification code must be ${VERIFICATION_CODE_LENGTH} digits`,
+    };
   }
 
   return { valid: true };

@@ -14,7 +14,11 @@ import { useSignIn } from "@clerk/expo";
 import { useClerk } from "@clerk/expo";
 import { useRouter, Link } from "expo-router";
 import { validateEmail, validateVerificationCode } from "@/libs/validation";
-import { AUTH_MESSAGES, AUTH_ERRORS } from "@/constants/auth";
+import {
+  AUTH_MESSAGES,
+  AUTH_ERRORS,
+  VERIFICATION_CODE_LENGTH,
+} from "@/constants/auth";
 import { colors } from "@/constants/theme";
 
 type SignInStep = "credentials" | "mfa";
@@ -71,7 +75,7 @@ export default function SignIn() {
     try {
       await signIn.password({
         identifier: email.trim(),
-        password: password.trim(),
+        password,
       });
 
       if (signIn.status === "complete") {
@@ -82,8 +86,19 @@ export default function SignIn() {
         signIn.status === "needs_second_factor" ||
         signIn.status === "needs_client_trust"
       ) {
-        // MFA required
-        setStep("mfa");
+        // MFA required - send email code immediately
+        try {
+          await signIn.mfa.sendEmailCode();
+          setStep("mfa");
+        } catch (mfaErr) {
+          console.error("MFA email code error:", mfaErr);
+          setGeneralError(
+            parseClerkError(
+              mfaErr,
+              "Failed to send verification code. Please try again.",
+            ),
+          );
+        }
       } else {
         setGeneralError(AUTH_ERRORS.SOMETHING_WENT_WRONG);
       }
@@ -117,17 +132,15 @@ export default function SignIn() {
     setGeneralError("");
 
     try {
-      // @ts-ignore - Method exists at runtime in Clerk Expo SDK
-      const result = await signIn.attemptSecondFactor({
-        strategy: "email_code",
+      const { error } = await signIn.mfa.verifyEmailCode({
         code: code.trim(),
       });
 
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
+      if (signIn.status === "complete") {
+        await setActive({ session: signIn.createdSessionId });
         router.replace("/");
       } else {
-        setGeneralError(AUTH_ERRORS.SOMETHING_WENT_WRONG);
+        setGeneralError(error?.message || AUTH_ERRORS.SOMETHING_WENT_WRONG);
       }
     } catch (err: any) {
       console.error("MFA verification error:", err);
@@ -150,9 +163,7 @@ export default function SignIn() {
     setGeneralError("");
 
     try {
-      // @ts-ignore - Method exists at runtime in Clerk Expo SDK
-      await signIn.prepareSecondFactor({ strategy: "email_code" });
-      // Silently succeed - Clerk sends the email in background
+      await signIn.mfa.sendEmailCode();
     } catch (err: any) {
       console.error("Resend code error:", err);
       setGeneralError(parseClerkError(err, AUTH_ERRORS.SOMETHING_WENT_WRONG));
@@ -371,9 +382,14 @@ export default function SignIn() {
                       placeholderTextColor={colors.muted}
                       value={code}
                       onChangeText={(text) => {
-                        setCode(text.replace(/\D/g, "").slice(0, 6));
+                        const sanitized = text
+                          .replace(/\D/g, "")
+                          .slice(0, VERIFICATION_CODE_LENGTH);
+                        setCode(sanitized);
+
                         if (formErrors.code) {
-                          const validation = validateVerificationCode(text);
+                          const validation =
+                            validateVerificationCode(sanitized);
                           if (validation.valid) {
                             setFormErrors((prev) => ({
                               ...prev,
@@ -384,7 +400,7 @@ export default function SignIn() {
                       }}
                       editable={!isLoading}
                       keyboardType="number-pad"
-                      maxLength={6}
+                      maxLength={VERIFICATION_CODE_LENGTH}
                       textAlign="center"
                       accessibilityLabel="Verification code input"
                     />
@@ -397,9 +413,13 @@ export default function SignIn() {
                   <Pressable
                     className="auth-button"
                     onPress={handleMFAVerify}
-                    disabled={isLoading || code.length !== 6}
+                    disabled={
+                      isLoading || code.length !== VERIFICATION_CODE_LENGTH
+                    }
                     style={
-                      isLoading || code.length !== 6 ? { opacity: 0.6 } : {}
+                      isLoading || code.length !== VERIFICATION_CODE_LENGTH
+                        ? { opacity: 0.6 }
+                        : {}
                     }
                     accessibilityRole="button"
                     accessibilityLabel="Verify code"

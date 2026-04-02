@@ -4,6 +4,7 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import { styled } from "nativewind";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
@@ -44,65 +45,19 @@ const Settings = () => {
     <SafeAreaView className="flex-1 bg-background">
       <ScrollView className="flex-1 p-5">
         {/* Page Title */}
-        <Text
-          style={{
-            fontSize: 28,
-            fontWeight: "bold",
-            color: colors.primary,
-            marginBottom: 24,
-          }}
-        >
-          Settings
-        </Text>
+        <Text style={styles.pageTitle}>Settings</Text>
 
         {/* Account Section */}
-        <View style={{ marginBottom: 24 }}>
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "600",
-              color: colors.primary,
-              marginBottom: 12,
-            }}
-          >
-            Account
-          </Text>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Account</Text>
 
           {/* Account Card */}
-          <View
-            style={{
-              backgroundColor: colors.card,
-              borderRadius: 16,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
+          <View style={styles.card}>
             {/* User ID Row */}
-            <View
-              style={{
-                marginBottom: 16,
-                paddingBottom: 16,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.border,
-              }}
-            >
+            <View style={styles.cardRow}>
+              <Text style={styles.cardRowLabel}>User ID</Text>
               <Text
-                style={{
-                  fontSize: 12,
-                  color: "rgba(0, 0, 0, 0.6)",
-                  marginBottom: 4,
-                  fontWeight: "600",
-                }}
-              >
-                User ID
-              </Text>
-              <Text
-                style={{
-                  fontSize: 16,
-                  color: colors.primary,
-                  fontWeight: "500",
-                }}
+                style={styles.cardRowValue}
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
@@ -111,31 +66,9 @@ const Settings = () => {
             </View>
 
             {/* User Info Row */}
-            <View
-              style={{
-                marginBottom: 16,
-                paddingBottom: 16,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.border,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: "rgba(0, 0, 0, 0.6)",
-                  marginBottom: 4,
-                  fontWeight: "600",
-                }}
-              >
-                Name
-              </Text>
-              <Text
-                style={{
-                  fontSize: 16,
-                  color: colors.primary,
-                  fontWeight: "500",
-                }}
-              >
+            <View style={styles.cardRow}>
+              <Text style={styles.cardRowLabel}>Name</Text>
+              <Text style={styles.cardRowValue}>
                 {user?.firstName && user?.lastName
                   ? `${user.firstName} ${user.lastName}`
                   : user?.firstName || "—"}
@@ -143,60 +76,18 @@ const Settings = () => {
             </View>
 
             {/* Email Row */}
-            <View
-              style={{
-                marginBottom: 16,
-                paddingBottom: 16,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.border,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: "rgba(0, 0, 0, 0.6)",
-                  marginBottom: 4,
-                  fontWeight: "600",
-                }}
-              >
-                Email
-              </Text>
-              <Text
-                style={{
-                  fontSize: 16,
-                  color: colors.primary,
-                  fontWeight: "500",
-                }}
-              >
+            <View style={styles.cardRow}>
+              <Text style={styles.cardRowLabel}>Email</Text>
+              <Text style={styles.cardRowValue}>
                 {user?.emailAddresses?.[0]?.emailAddress || "—"}
               </Text>
             </View>
 
             {/* Joined Date Row */}
-            <View
-              style={{
-                marginBottom: 16,
-                paddingBottom: 16,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.border,
-              }}
-            >
+            <View style={styles.cardRow}>
+              <Text style={styles.cardRowLabel}>Joined</Text>
               <Text
-                style={{
-                  fontSize: 12,
-                  color: "rgba(0, 0, 0, 0.6)",
-                  marginBottom: 4,
-                  fontWeight: "600",
-                }}
-              >
-                Joined
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: colors.primary,
-                  fontWeight: "500",
-                }}
+                style={styles.cardRowValueSmall}
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
@@ -208,13 +99,7 @@ const Settings = () => {
 
             {/* Sign Out Button */}
             <Pressable
-              style={{
-                backgroundColor: colors.destructive,
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                borderRadius: 12,
-                alignItems: "center",
-              }}
+              style={styles.signOutButton}
               onPress={handleSignOut}
               disabled={isSigningOut}
               accessibilityRole="button"
@@ -223,87 +108,25 @@ const Settings = () => {
               {isSigningOut ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text
-                  style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}
-                >
-                  Sign Out
-                </Text>
+                <Text style={styles.signOutButtonText}>Sign Out</Text>
               )}
             </Pressable>
           </View>
         </View>
 
         {/* App Info Section */}
-        <View style={{ marginBottom: 24 }}>
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "600",
-              color: colors.primary,
-              marginBottom: 12,
-            }}
-          >
-            About
-          </Text>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>About</Text>
 
-          <View
-            style={{
-              backgroundColor: colors.card,
-              borderRadius: 16,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <View
-              style={{
-                marginBottom: 12,
-                paddingBottom: 12,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.border,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: "rgba(0, 0, 0, 0.6)",
-                  marginBottom: 4,
-                  fontWeight: "600",
-                }}
-              >
-                App Version
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: colors.primary,
-                  fontWeight: "500",
-                }}
-              >
-                1.0.0
-              </Text>
+          <View style={styles.card}>
+            <View style={[styles.cardRow, { marginBottom: 0 }]}>
+              <Text style={styles.cardRowLabel}>App Version</Text>
+              <Text style={styles.cardRowValueSmall}>1.0.0</Text>
             </View>
 
             <View>
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: "rgba(0, 0, 0, 0.6)",
-                  marginBottom: 4,
-                  fontWeight: "600",
-                }}
-              >
-                Build
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: colors.primary,
-                  fontWeight: "500",
-                }}
-              >
-                Production
-              </Text>
+              <Text style={styles.cardRowLabel}>Build</Text>
+              <Text style={styles.cardRowValueSmall}>Production</Text>
             </View>
           </View>
         </View>
@@ -313,3 +136,62 @@ const Settings = () => {
 };
 
 export default Settings;
+
+const styles = StyleSheet.create({
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: colors.primary,
+    marginBottom: 24,
+  },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.primary,
+    marginBottom: 12,
+  },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cardRow: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  cardRowLabel: {
+    fontSize: 12,
+    color: "rgba(0, 0, 0, 0.6)",
+    marginBottom: 4,
+    fontWeight: "600",
+  },
+  cardRowValue: {
+    fontSize: 16,
+    color: colors.primary,
+    fontWeight: "500",
+  },
+  cardRowValueSmall: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: "500",
+  },
+  signOutButton: {
+    backgroundColor: colors.destructive,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  signOutButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+});

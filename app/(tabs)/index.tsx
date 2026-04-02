@@ -33,7 +33,9 @@ export default function App() {
             <View className="home-header">
               <View className="home-user">
                 <Image
-                  source={{ uri: user?.imageUrl }}
+                  source={
+                    user?.imageUrl ? { uri: user.imageUrl } : images.avatar
+                  }
                   className="home-avatar"
                 />
                 <Text className="home-user-name">
