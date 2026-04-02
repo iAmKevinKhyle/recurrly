@@ -33,10 +33,8 @@ export default function App() {
     const isExpanding = expandedSubscriptionId !== subscriptionId;
 
     if (isExpanding && user?.id) {
-      posthog.identify(user?.id || "Unknown", {
+      posthog.identify(user?.id, {
         email: user?.emailAddresses?.[0]?.emailAddress || "Unknown",
-        firstName: user?.firstName || "Unknown",
-        lastName: user?.lastName || "Unknown",
       });
 
       posthog.capture("subscription_expanded", {

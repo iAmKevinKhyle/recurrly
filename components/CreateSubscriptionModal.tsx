@@ -122,13 +122,17 @@ export default function CreateSubscriptionModal({
 
     onCreate(newSubscription);
 
-    posthog.capture("subscription_created", {
-      subscription_id: newSubscription.id,
-      subscription_name: newSubscription.name,
-      subscription_price: newSubscription.price,
-      subscription_frequency: newSubscription.billing,
-      category: newSubscription?.category || "Uncategorized",
-    });
+    try {
+      posthog.capture("subscription_created", {
+        subscription_id: newSubscription.id,
+        subscription_name: newSubscription.name,
+        subscription_price: newSubscription.price,
+        subscription_frequency: newSubscription.billing,
+        category: newSubscription?.category || "Uncategorized",
+      });
+    } catch (error) {
+      console.warn("Failed to track subscription creation with PostHog", error);
+    }
 
     resetForm();
     onClose();
@@ -175,7 +179,13 @@ export default function CreateSubscriptionModal({
                   <Text className="auth-label">Price</Text>
                   <TextInput
                     value={price}
-                    onChangeText={setPrice}
+                    onChangeText={(text) => {
+                      // Allow only digits and one decimal point
+                      const sanitized = text
+                        .replace(/[^0-9.]/g, "")
+                        .replace(/(\..*)\./g, "$1");
+                      setPrice(sanitized);
+                    }}
                     placeholder="0.00"
                     keyboardType="decimal-pad"
                     className="auth-input"

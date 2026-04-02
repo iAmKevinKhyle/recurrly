@@ -170,7 +170,7 @@ export default function SignUp() {
     } finally {
       setIsLoading(false);
     }
-  }, [signUp, setActive, code]);
+  }, [signUp, setActive, code, email, posthog, router]);
 
   const handleResendCode = useCallback(async () => {
     if (!signUp || resendCooldown > 0) {

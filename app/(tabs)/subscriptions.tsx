@@ -95,8 +95,6 @@ const Subscriptions = () => {
       if (isExpanding && user?.id) {
         posthog.identify(user.id, {
           email: user.emailAddresses?.[0]?.emailAddress,
-          firstName: user.firstName,
-          lastName: user.lastName,
         });
 
         posthog.capture("subscription_expanded", {

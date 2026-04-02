@@ -135,7 +135,7 @@ export default function SignIn() {
     } finally {
       setIsLoading(false);
     }
-  }, [signIn, setActive, email, password]);
+  }, [signIn, setActive, email, password, posthog, router, user]);
 
   const handleMFAVerify = useCallback(async () => {
     if (!signIn || !setActive) {
@@ -182,7 +182,7 @@ export default function SignIn() {
     } finally {
       setIsLoading(false);
     }
-  }, [signIn, setActive, code]);
+  }, [signIn, setActive, code, posthog, router, user]);
 
   const handleResendCode = useCallback(async () => {
     if (!signIn) {
