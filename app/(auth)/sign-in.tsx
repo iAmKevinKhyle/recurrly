@@ -10,9 +10,10 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSignIn } from "@clerk/expo";
+import { useSignIn, useUser } from "@clerk/expo";
 import { useClerk } from "@clerk/expo";
 import { useRouter, Link } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import { validateEmail, validateVerificationCode } from "@/libs/validation";
 import {
   AUTH_MESSAGES,
@@ -38,8 +39,10 @@ const parseClerkError = (err: any, fallbackMessage: string): string => {
 
 export default function SignIn() {
   const { signIn } = useSignIn();
+  const { user } = useUser();
   const { setActive } = useClerk();
   const router = useRouter();
+  const posthog = usePostHog();
   const codeInputRef = useRef<TextInput>(null);
 
   const [step, setStep] = useState<SignInStep>("credentials");
@@ -79,14 +82,31 @@ export default function SignIn() {
       });
 
       if (signIn.status === "complete") {
-        // Sign in successful
         await setActive({ session: signIn.createdSessionId });
+
+        try {
+          const userId = user?.id || "Unknown";
+
+          posthog.identify(userId, {
+            email: email.trim() || "Unknown",
+            signInMethod: "email_password",
+            lastSignInAt: new Date().toISOString(),
+          });
+
+          posthog.capture("user_signed_in", {
+            userId,
+            method: "email_password",
+          });
+        } catch (analyticsError) {
+          console.warn("PostHog error (ignored):", analyticsError);
+        }
+
         router.replace("/");
       } else if (
         signIn.status === "needs_second_factor" ||
         signIn.status === "needs_client_trust"
       ) {
-        // MFA required - send email code immediately
+        // MFA required
         try {
           await signIn.mfa.sendEmailCode();
           setStep("mfa");
@@ -115,7 +135,7 @@ export default function SignIn() {
     } finally {
       setIsLoading(false);
     }
-  }, [signIn, setActive, email, password]);
+  }, [signIn, setActive, email, password, posthog, router, user]);
 
   const handleMFAVerify = useCallback(async () => {
     if (!signIn || !setActive) {
@@ -138,6 +158,16 @@ export default function SignIn() {
 
       if (signIn.status === "complete") {
         await setActive({ session: signIn.createdSessionId });
+
+        posthog.identify(user?.id || "Unknown", {
+          mfaCompleted: true,
+          lastMFAAt: new Date().toISOString(),
+        });
+
+        posthog.capture("mfa_verified", {
+          strategy: "email_code",
+        });
+
         router.replace("/");
       } else {
         setGeneralError(error?.message || AUTH_ERRORS.SOMETHING_WENT_WRONG);
@@ -152,7 +182,7 @@ export default function SignIn() {
     } finally {
       setIsLoading(false);
     }
-  }, [signIn, setActive, code]);
+  }, [signIn, setActive, code, posthog, router, user]);
 
   const handleResendCode = useCallback(async () => {
     if (!signIn) {

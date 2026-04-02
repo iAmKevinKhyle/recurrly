@@ -1,18 +1,39 @@
-import { SplashScreen, Stack } from "expo-router";
+import { SplashScreen, Stack, usePathname } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import { useEffect } from "react";
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
+import { PostHogProvider, usePostHog } from "posthog-react-native";
+import { SubscriptionsProvider } from "@/contexts/SubscriptionsContext";
 
 void SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY!;
+const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST;
 
 if (!publishableKey) {
   throw new Error(
     "Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in environment variables",
   );
+}
+
+if (!posthogKey) {
+  throw new Error("Missing EXPO_PUBLIC_POSTHOG_KEY in environment variables");
+}
+
+function ScreenTracker() {
+  const pathname = usePathname();
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    if (posthog) {
+      posthog.screen(pathname);
+    }
+  }, [pathname, posthog]);
+
+  return null;
 }
 
 export default function RootLayout() {
@@ -35,9 +56,14 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-        <Stack screenOptions={{ headerShown: false }} />
-      </ClerkProvider>
+      <PostHogProvider apiKey={posthogKey} options={{ host: posthogHost }}>
+        <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+          <SubscriptionsProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+            <ScreenTracker />
+          </SubscriptionsProvider>
+        </ClerkProvider>
+      </PostHogProvider>
     </SafeAreaProvider>
   );
 }

@@ -11,6 +11,7 @@ import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 import { useUser } from "@clerk/expo";
 import { useClerk } from "@clerk/expo";
 import { useRouter } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import { useState } from "react";
 import { colors } from "@/constants/theme";
 
@@ -20,12 +21,27 @@ const Settings = () => {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();
+  const posthog = usePostHog();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
+
     try {
+      // Always sign out first (critical path)
       await signOut();
+
+      // Analytics should be best-effort only
+      try {
+        posthog.capture("user_signed_out", {
+          email: user?.emailAddresses?.[0]?.emailAddress || "Unknown",
+        });
+
+        posthog.reset();
+      } catch (analyticsError) {
+        console.warn("PostHog error (ignored):", analyticsError);
+      }
+
       router.replace("/(auth)/sign-in");
     } catch (err) {
       console.error("Sign out error:", err);
