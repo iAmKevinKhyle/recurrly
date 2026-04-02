@@ -4,12 +4,7 @@ import { styled } from "nativewind";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 import { usePostHog } from "posthog-react-native";
 import images from "@/constants/images";
-import {
-  HOME_BALANCE,
-  HOME_SUBSCRIPTIONS,
-  HOME_USER,
-  UPCOMING_SUBSCRIPTIONS,
-} from "@/constants/data";
+import { HOME_BALANCE, UPCOMING_SUBSCRIPTIONS } from "@/constants/data";
 import { icons } from "@/constants/icons";
 import { formatCurrency } from "@/libs/utils";
 import dayjs from "dayjs";
@@ -36,23 +31,21 @@ export default function App() {
     subscriptionName: string,
   ) => {
     const isExpanding = expandedSubscriptionId !== subscriptionId;
-    posthog.identify(user?.id || "Unknown", {
-      email: user?.emailAddresses?.[0]?.emailAddress || "Unknown",
-      firstName: user?.firstName || "Unknown",
-      lastName: user?.lastName || "Unknown",
-    });
 
     if (isExpanding && user?.id) {
+      posthog.identify(user?.id || "Unknown", {
+        email: user?.emailAddresses?.[0]?.emailAddress || "Unknown",
+        firstName: user?.firstName || "Unknown",
+        lastName: user?.lastName || "Unknown",
+      });
+
       posthog.capture("subscription_expanded", {
         subscription_id: subscriptionId,
         subscription_name: subscriptionName,
-      });
-    } else {
-      posthog.capture("subscription_collapsed", {
-        subscription_id: subscriptionId,
-        subscription_name: subscriptionName,
+        source: "home_screen",
       });
     }
+
     setExpandedSubscriptionId((currentId) =>
       currentId === subscriptionId ? null : subscriptionId,
     );

@@ -12,6 +12,7 @@ import {
 import dayjs from "dayjs";
 import clsx from "clsx";
 import { icons } from "@/constants/icons";
+import { usePostHog } from "posthog-react-native";
 
 interface CreateSubscriptionModalProps {
   isVisible: boolean;
@@ -64,20 +65,7 @@ const resolveIconForName = (name: string) => {
     }
   }
 
-  // second priority: DuckDuckGo icon search (free, no auth needed)
-  const rawName = normalized.split(" ")[0].replace(/[^a-z0-9]/g, "");
-  if (rawName.length > 0) {
-    const fallbackDomain = `${rawName}.com`;
-    return {
-      uri: `https://icons.duckduckgo.com/ip3/${fallbackDomain}.ico`,
-    };
-  }
-
-  // final fallback: generic initials style (handled by SubscriptionCard onError)
-  const fallbackName = encodeURIComponent(name.trim() || "subscription");
-  return {
-    uri: `https://ui-avatars.com/api/?name=${fallbackName}&background=f5c542&color=081126`,
-  };
+  return null;
 };
 
 export default function CreateSubscriptionModal({
@@ -93,11 +81,18 @@ export default function CreateSubscriptionModal({
   const parsedPrice = Number(price);
   const isSubmitEnabled = name.trim().length > 0 && parsedPrice > 0;
 
+  const posthog = usePostHog();
+
   const resetForm = () => {
     setName("");
     setPrice("");
     setFrequency("Monthly");
     setCategory("Entertainment");
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
   };
 
   const handleSubmit = () => {
@@ -126,6 +121,15 @@ export default function CreateSubscriptionModal({
     };
 
     onCreate(newSubscription);
+
+    posthog.capture("subscription_created", {
+      subscription_id: newSubscription.id,
+      subscription_name: newSubscription.name,
+      subscription_price: newSubscription.price,
+      subscription_frequency: newSubscription.billing,
+      category: newSubscription?.category || "Uncategorized",
+    });
+
     resetForm();
     onClose();
   };
@@ -137,10 +141,10 @@ export default function CreateSubscriptionModal({
       visible={isVisible}
       animationType="slide"
       transparent
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <Pressable style={{ flex: 1 }} onPress={handleClose} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -149,13 +153,7 @@ export default function CreateSubscriptionModal({
           <View className="modal-container">
             <View className="modal-header">
               <Text className="modal-title">New Subscription</Text>
-              <Pressable
-                onPress={() => {
-                  resetForm();
-                  onClose();
-                }}
-                className="modal-close"
-              >
+              <Pressable onPress={handleClose} className="modal-close">
                 <Text className="modal-close-text">×</Text>
               </Pressable>
             </View>

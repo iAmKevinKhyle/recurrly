@@ -10,11 +10,17 @@ import { SubscriptionsProvider } from "@/contexts/SubscriptionsContext";
 void SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY!;
+const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST;
 
 if (!publishableKey) {
   throw new Error(
     "Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in environment variables",
   );
+}
+
+if (!posthogKey) {
+  throw new Error("Missing EXPO_PUBLIC_POSTHOG_KEY in environment variables");
 }
 
 function ScreenTracker() {
@@ -50,10 +56,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <PostHogProvider
-        apiKey={process.env.EXPO_PUBLIC_POSTHOG_KEY!}
-        options={{ host: process.env.EXPO_PUBLIC_POSTHOG_HOST }}
-      >
+      <PostHogProvider apiKey={posthogKey} options={{ host: posthogHost }}>
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SubscriptionsProvider>
             <Stack screenOptions={{ headerShown: false }} />

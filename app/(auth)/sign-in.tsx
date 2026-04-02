@@ -82,26 +82,31 @@ export default function SignIn() {
       });
 
       if (signIn.status === "complete") {
-        // Sign in successful
         await setActive({ session: signIn.createdSessionId });
 
-        posthog.identify(user?.id || "Unknown", {
-          email: email.trim(),
-          signInMethod: "email_password",
-          lastSignInAt: new Date().toISOString(),
-        });
+        try {
+          const userId = user?.id || "Unknown";
 
-        posthog.capture("user_signed_in", {
-          email: email.trim(),
-          method: "email_password",
-        });
+          posthog.identify(userId, {
+            email: email.trim() || "Unknown",
+            signInMethod: "email_password",
+            lastSignInAt: new Date().toISOString(),
+          });
+
+          posthog.capture("user_signed_in", {
+            userId,
+            method: "email_password",
+          });
+        } catch (analyticsError) {
+          console.warn("PostHog error (ignored):", analyticsError);
+        }
 
         router.replace("/");
       } else if (
         signIn.status === "needs_second_factor" ||
         signIn.status === "needs_client_trust"
       ) {
-        // MFA required - send email code immediately
+        // MFA required
         try {
           await signIn.mfa.sendEmailCode();
           setStep("mfa");

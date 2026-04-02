@@ -26,15 +26,22 @@ const Settings = () => {
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
+
     try {
-      posthog.capture("user_signed_out", {
-        email: user?.emailAddresses?.[0]?.emailAddress || "Unknown",
-      });
-
-      // Reset PostHog identity on sign out
-      posthog.reset();
-
+      // Always sign out first (critical path)
       await signOut();
+
+      // Analytics should be best-effort only
+      try {
+        posthog.capture("user_signed_out", {
+          email: user?.emailAddresses?.[0]?.emailAddress || "Unknown",
+        });
+
+        posthog.reset();
+      } catch (analyticsError) {
+        console.warn("PostHog error (ignored):", analyticsError);
+      }
+
       router.replace("/(auth)/sign-in");
     } catch (err) {
       console.error("Sign out error:", err);

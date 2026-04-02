@@ -1,5 +1,5 @@
 import { View, Text, Image, Pressable } from "react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   formatCurrency,
   formatStatusLabel,
@@ -34,7 +34,11 @@ const SubscriptionCard = ({
     return `${firstChar}${secondChar}`;
   }, [name]);
 
-  const showInitials = imageFailed && initials.length > 0;
+  const showInitials = !icon || imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [icon]);
 
   return (
     <Pressable

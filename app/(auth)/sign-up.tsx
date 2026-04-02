@@ -138,23 +138,23 @@ export default function SignUp() {
 
       if (signUp.status === "complete") {
         const userId = signUp?.createdUserId || "Unknown";
-        const firstName = signUp?.firstName || "";
-        const lastName = signUp?.lastName || "";
 
         await setActive({ session: signUp?.createdSessionId });
 
-        posthog.identify(userId, {
-          email: email.trim(),
-          firstName,
-          lastName,
-          signupMethod: "email_password",
-          createdAt: new Date().toISOString(),
-        });
+        try {
+          posthog.identify(userId, {
+            email: email.trim() || "Unknown",
+            signupMethod: "email_password",
+            createdAt: new Date().toISOString(),
+          });
 
-        posthog.capture("user_signed_up", {
-          email: email.trim(),
-          method: "email_password",
-        });
+          posthog.capture("user_signed_up", {
+            userId,
+            method: "email_password",
+          });
+        } catch (analyticsError) {
+          console.warn("PostHog error (ignored):", analyticsError);
+        }
 
         router.replace("/");
       } else {
