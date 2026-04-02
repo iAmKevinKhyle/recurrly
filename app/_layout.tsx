@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
+import { SubscriptionsProvider } from "@/contexts/SubscriptionsContext";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -54,8 +55,10 @@ export default function RootLayout() {
         options={{ host: process.env.EXPO_PUBLIC_POSTHOG_HOST }}
       >
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-          <Stack screenOptions={{ headerShown: false }} />
-          <ScreenTracker />
+          <SubscriptionsProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+            <ScreenTracker />
+          </SubscriptionsProvider>
         </ClerkProvider>
       </PostHogProvider>
     </SafeAreaProvider>

@@ -23,6 +23,19 @@ const SubscriptionCard = ({
   startDate,
   status,
 }: SubscriptionCardProps) => {
+  const [imageFailed, setImageFailed] = React.useState(false);
+
+  const initials = React.useMemo(() => {
+    const words = name.trim().split(/\s+/).slice(0, 2);
+    if (words.length === 0) return "";
+    const [first, second] = words;
+    const firstChar = first?.[0]?.toUpperCase() ?? "";
+    const secondChar = second?.[0]?.toUpperCase() ?? "";
+    return `${firstChar}${secondChar}`;
+  }, [name]);
+
+  const showInitials = imageFailed && initials.length > 0;
+
   return (
     <Pressable
       onPress={onPress}
@@ -34,7 +47,30 @@ const SubscriptionCard = ({
     >
       <View className="sub-head">
         <View className="sub-main">
-          <Image source={icon} className="sub-icon" />
+          {showInitials ? (
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 16,
+                backgroundColor: "rgba(8,17,38,0.12)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                style={{ fontSize: 18, fontWeight: "700", color: "#081126" }}
+              >
+                {initials}
+              </Text>
+            </View>
+          ) : (
+            <Image
+              source={icon}
+              className="sub-icon"
+              onError={() => setImageFailed(true)}
+            />
+          )}
           <View className="sub-copy">
             <Text numberOfLines={1} className="sub-title">
               {name}

@@ -1,4 +1,4 @@
-import { FlatList, Image, Text, View } from "react-native";
+import { FlatList, Image, Text, View, Pressable } from "react-native";
 import "@/global.css";
 import { styled } from "nativewind";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
@@ -16,8 +16,10 @@ import dayjs from "dayjs";
 import ListHeading from "@/components/ListHeading";
 import UpcomingSubscriptionsCard from "@/components/UpcomingSubscriptionsCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
+import CreateSubscriptionModal from "@/components/CreateSubscriptionModal";
 import { useState } from "react";
 import { useUser } from "@clerk/expo";
+import { useSubscriptions } from "@/contexts/SubscriptionsContext";
 const SafeAreaView = styled(RNSafeAreaView);
 
 export default function App() {
@@ -26,6 +28,8 @@ export default function App() {
   const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<
     string | null
   >(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const { subscriptions, addSubscription } = useSubscriptions();
 
   const handleSubscriptionPress = (
     subscriptionId: string,
@@ -74,9 +78,12 @@ export default function App() {
                 </Text>
               </View>
 
-              <View className="border rounded-full p-1">
+              <Pressable
+                onPress={() => setIsModalVisible(true)}
+                className="border rounded-full p-1"
+              >
                 <Image source={icons.add} className="home-add-icon" />
-              </View>
+              </Pressable>
             </View>
 
             <View className="home-balance-card">
@@ -114,7 +121,7 @@ export default function App() {
             <ListHeading title="All Subscription" />
           </>
         )}
-        data={HOME_SUBSCRIPTIONS}
+        data={subscriptions}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <SubscriptionCard
@@ -130,6 +137,12 @@ export default function App() {
           <Text className="home-empty-state">No subscriptions yet.</Text>
         }
         contentContainerClassName="pb-30"
+      />
+
+      <CreateSubscriptionModal
+        isVisible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        onCreate={addSubscription}
       />
     </SafeAreaView>
   );
